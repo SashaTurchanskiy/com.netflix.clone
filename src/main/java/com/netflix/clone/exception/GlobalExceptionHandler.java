@@ -1,11 +1,15 @@
 package com.netflix.clone.exception;
 
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.time.Instant;
 import java.util.Map;
@@ -61,6 +65,30 @@ public class GlobalExceptionHandler {
         log.warn("EmailAlreadyExistsException: {}", ex.getMessage(), ex);
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex){
+        String message =
+                ex.getBindingResult().getAllErrors().stream()
+                        .findFirst()
+                        .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                        .orElse("Validation error");
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
+                .body(Map.of("timestamp", Instant.now(),
+                        "status", status.value(),
+                        "error", message));
+    }
+    @ExceptionHandler({AsyncRequestNotUsableException.class, ClientAbortException.class})
+    public void handleClient(Exception ex){
+        log.info("Client closed connection during streaming (expected for video seeking/buffering): {}", ex.getMessage());
+    }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex){
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+    }
+
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message){
         Map<String, Object> body = Map.of("timestamp", Instant.now(),"error", message);
         return ResponseEntity.status(status).body(body);
