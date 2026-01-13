@@ -18,7 +18,7 @@ public class JwtUtil {
 
     private static final long JWT_TOKEN_VALIDITY = 30L * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
-    @Value("${jwt.secret:defaultSecretKeyForNetflixClone}")
+    @Value("${jwt.secret:qweusdfmnspdfkwoiejfoisvjbfoidfvpiodjnoibfmdfpobdpobkfofpzsfpsl}")
     private String secret;
 
     private SecretKey getSigningKey(){
@@ -39,6 +39,7 @@ public class JwtUtil {
     }
     private Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
+                .clockSkewSeconds(60000)
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)

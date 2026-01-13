@@ -21,7 +21,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -29,8 +29,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String jwt = extractJwtToken(request);
-        String username = jwtUtil.getUsernameFromToken(jwt);
-
+        String username = null;
+        if (jwt != null){
+             username = jwtUtil.getUsernameFromToken(jwt);
+        }
         if (shouldProcessAuthentication(username)){
             processAuthentication(request, username, jwt);
         }
@@ -66,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String extractJwtToken(HttpServletRequest request) {
-        final String authHeader = request.getHeader("Authorization");
+        final String authHeader = request.getHeader(JwtConstant.JWT_HEADER);
         final String requestURI = request.getRequestURI();
 
         if (authHeader != null && authHeader.startsWith("Bearer ")){
