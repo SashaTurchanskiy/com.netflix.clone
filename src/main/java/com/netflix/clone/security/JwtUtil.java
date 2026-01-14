@@ -39,7 +39,7 @@ public class JwtUtil {
     }
     private Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
-                .clockSkewSeconds(60000)
+                .clockSkewSeconds(6000000)
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)

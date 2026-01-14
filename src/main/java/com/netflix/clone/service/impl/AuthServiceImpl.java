@@ -2,6 +2,7 @@ package com.netflix.clone.service.impl;
 
 import com.netflix.clone.dao.UserRepository;
 import com.netflix.clone.dto.request.UserRequest;
+import com.netflix.clone.dto.response.EmailValidationResponse;
 import com.netflix.clone.dto.response.LoginResponse;
 import com.netflix.clone.dto.response.MessageResponse;
 import com.netflix.clone.entity.User;
@@ -9,6 +10,7 @@ import com.netflix.clone.enums.Role;
 import com.netflix.clone.exception.AccountDeactivatedException;
 import com.netflix.clone.exception.BadCredentialsException;
 import com.netflix.clone.exception.EmailAlreadyExistsException;
+import com.netflix.clone.exception.InvalidTokenException;
 import com.netflix.clone.security.JwtUtil;
 import com.netflix.clone.service.AuthService;
 import com.netflix.clone.service.EmailService;
@@ -65,5 +67,27 @@ public class AuthServiceImpl implements AuthService {
         }
         final String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return new LoginResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
+    }
+
+    @Override
+    public EmailValidationResponse validateEmail(String email) {
+        boolean exists = userRepository.existsByEmail(email);
+        return new EmailValidationResponse(exists, !exists);
+    }
+
+    @Override
+    public MessageResponse verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(()-> new InvalidTokenException("Invalid or expired verification token"));
+
+        if (user.getVerificationTokenExpiry() == null || user.getVerificationTokenExpiry().isBefore(Instant.now())){
+            throw new InvalidTokenException("Verification link has expired. Please request a new one");
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+        return new MessageResponse("Email verified  successfully! u can login now");
     }
 }
