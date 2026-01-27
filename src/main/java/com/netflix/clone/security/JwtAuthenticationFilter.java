@@ -28,57 +28,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String jwt = extractJwtToken(request);
-        String username = null;
-        if (jwt != null){
-             username = jwtUtil.getUsernameFromToken(jwt);
+        final String authorizationHeader = request.getHeader("Authorization");
+
+        String email = null;
+        String jwt = null;
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")){
+            jwt = authorizationHeader.substring(7);
+            try {
+                email = jwtUtil.extractEmail(jwt);
+            }catch (Exception e){
+                logger.error("Jwt Token extraction failed: "+ e.getMessage());
+            }
         }
-        if (shouldProcessAuthentication(username)){
-            processAuthentication(request, username, jwt);
+
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null){
+            if (jwtUtil.validateToken(jwt, email) && jwtUtil.isAccessToken(jwt)){
+                String role = jwtUtil.getRoleFromToken(jwt);
+
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(email, null,
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+ role)));
+
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            }
         }
         filterChain.doFilter(request, response);
-    }
 
-    private void processAuthentication(HttpServletRequest request, String username, String jwt) {
-        if (jwtUtil.validateToken(jwt)){
-            UserDetails userDetails = createUserDetailsFromToken(jwt, username);
-            setAuthenticationInContext(request, userDetails);
-        }
-    }
-
-    private void setAuthenticationInContext(HttpServletRequest request, UserDetails userDetails) {
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-
-    }
-
-    private UserDetails createUserDetailsFromToken(String jwt, String username) {
-        String role = jwtUtil.getRoleFromToken(jwt);
-
-        return User.builder()
-                .username(username)
-                .password("")
-                .authorities(Collections.singletonList(new SimpleGrantedAuthority("Role_" + role)))
-                .build();
-    }
-
-    private boolean shouldProcessAuthentication(String username) {
-        return username != null && SecurityContextHolder.getContext().getAuthentication() == null;
-    }
-
-    private String extractJwtToken(HttpServletRequest request) {
-        final String authHeader = request.getHeader(JwtConstant.JWT_HEADER);
-        final String requestURI = request.getRequestURI();
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")){
-            return authHeader.substring(7);
-        } else if ((requestURI.contains("/api/files/videos") || requestURI.contains("/api/files/images"))
-        && request.getParameter("token") != null) {
-            return request.getParameter("token");
-        } else {
-            return null;
-
-        }
     }
 }

@@ -21,16 +21,25 @@ public class JwtUtil {
     @Value("${jwt.secret:qweusdfmnspdfkwoiejfoisvjbfoidfvpiodjnoibfmdfpobdpobkfofpzsfpsl}")
     private String secret;
 
+    @Value("1800000")
+    private long accessTokenExpiration;
+
     private SecretKey getSigningKey(){
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
     public String getUsernameFromToken(String token){
         return getClaimFromToken(token, Claims::getSubject);
     }
+    public String extractEmail(String token){
+        return getClaimFromToken(token, claims -> claims.get("email", String.class));
+    }
     public String getRoleFromToken(String token){
         return getClaimFromToken(token, claims -> claims.get("role", String.class));
     }
-    public Date getExpirationDateFromToken(String token){
+    public String extractTokenType(String token){
+        return getClaimFromToken(token, claims -> claims.get("type", String.class));
+    }
+    public Date extractExpiration(String token){
         return getClaimFromToken(token, Claims::getExpiration);
     }
     private <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
@@ -39,37 +48,40 @@ public class JwtUtil {
     }
     private Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
-                .clockSkewSeconds(6000000)
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
     private Boolean isTokenExpired(String token) {
-        final Date expiration = getExpirationDateFromToken(token);
-        return expiration.before(new Date());
+       return extractExpiration(token).before(new Date());
     }
     public String generateToken(String username, String role) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("username", username);
         claims.put("role", role);
-        return doGenerateToken(claims, username);
+        return doGenerateToken(claims, username, accessTokenExpiration);
     }
-    private String doGenerateToken(Map<String, Object> claims, String subject) {
+    private String doGenerateToken(Map<String, Object> claims, String subject, long accessTokenExpiration) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
+
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY))
+                .issuedAt(now)
+                .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
     }
-    public Boolean validateToken(String token){
-        try {
-            getAllClaimsFromToken(token);
-            return !isTokenExpired(token);
-        }catch (Exception e){
-            return false;
+
+    public Boolean isAccessToken(String token){
+        return "ACCESS".equals(extractTokenType(token));
+    }
+
+    public Boolean validateToken(String token, String email){
+        final String extractEmail = extractEmail(token);
+        return (extractEmail.equals(email) && !isTokenExpired(token));
         }
     }
 
-}
