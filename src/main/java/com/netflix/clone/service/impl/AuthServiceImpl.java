@@ -7,10 +7,7 @@ import com.netflix.clone.dto.response.LoginResponse;
 import com.netflix.clone.dto.response.MessageResponse;
 import com.netflix.clone.entity.User;
 import com.netflix.clone.enums.Role;
-import com.netflix.clone.exception.AccountDeactivatedException;
-import com.netflix.clone.exception.BadCredentialsException;
-import com.netflix.clone.exception.EmailAlreadyExistsException;
-import com.netflix.clone.exception.InvalidTokenException;
+import com.netflix.clone.exception.*;
 import com.netflix.clone.security.JwtUtil;
 import com.netflix.clone.service.AuthService;
 import com.netflix.clone.service.EmailService;
@@ -22,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.UUID;
 
+
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -31,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
     private final ServiceUtils serviceUtils;
+
 
     @Override
     public MessageResponse signup(UserRequest request) {
@@ -90,4 +90,58 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
         return new MessageResponse("Email verified  successfully! u can login now");
     }
+
+    @Override
+    public MessageResponse resendVerification(String email) throws Exception {
+        User user = serviceUtils.getUserByEmailOrThrow(email);
+
+        String verificationToken = UUID.randomUUID().toString();
+        user.setVerificationToken(verificationToken);
+        user.setVerificationTokenExpiry(Instant.now().plusSeconds(86400));
+        userRepository.save(user);
+        emailService.sendVerificationEmail(email, verificationToken);
+        return new MessageResponse("Verification email resent successfully. Please check your inbox");
+    }
+
+    @Override
+    public MessageResponse forgotPassword(String email) throws Exception {
+        User user = serviceUtils.getUserByEmailOrThrow(email);
+        String resetToken = UUID.randomUUID().toString();
+        user.setPasswordResetToken(resetToken);
+        user.setPasswordResetTokenExpiry(Instant.now().plusSeconds(3600));
+        userRepository.save(user);
+        emailService.sendPasswordResetEmail(email, resetToken);
+
+        return new MessageResponse("Password reset email sent successfully! Please check your inbox");
+    }
+
+    @Override
+    public MessageResponse resetPassword(String token, String newPassword) {
+        User user = userRepository.findByPasswordResetToken(token)
+                .orElseThrow(()-> new  InvalidTokenException("Invalid or expired reset token"));
+
+        if (user.getPasswordResetToken() == null || user.getPasswordResetTokenExpiry().isBefore(Instant.now())){
+            throw new InvalidTokenException("Reset token has expired");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+        userRepository.save(user);
+
+        return new MessageResponse("Password successfully reset. You can login with your new password now");
+    }
+
+    @Override
+    public MessageResponse changePassword(String email, String currentPassword, String newPassword) throws Exception {
+        User user = serviceUtils.getUserByEmailOrThrow(email);
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())){
+            throw new InvalidCredentialsException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return new MessageResponse("Password changed successfully");
+    }
+
 }

@@ -31,7 +31,7 @@ public class JwtUtil {
         return getClaimFromToken(token, Claims::getSubject);
     }
     public String extractEmail(String token){
-        return getClaimFromToken(token, claims -> claims.get("email", String.class));
+        return getClaimFromToken(token, Claims::getSubject);
     }
     public String getRoleFromToken(String token){
         return getClaimFromToken(token, claims -> claims.get("role", String.class));
@@ -60,6 +60,7 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", username);
         claims.put("role", role);
+        claims.put("type", "ACCESS");
         return doGenerateToken(claims, username, accessTokenExpiration);
     }
     private String doGenerateToken(Map<String, Object> claims, String subject, long accessTokenExpiration) {
