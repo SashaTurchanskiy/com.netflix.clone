@@ -26,4 +26,6 @@ public interface AuthService {
     MessageResponse resetPassword(String token,String newPassword);
 
     MessageResponse changePassword(String email, String currentPassword,  String newPassword) throws Exception;
+
+    LoginResponse currentUser(String email) throws Exception;
 }

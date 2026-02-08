@@ -55,4 +55,10 @@ public class AuthController {
         String email = authentication.getName();
         return ResponseEntity.ok(authService.changePassword(email, request.getCurrentPassword(), request.getNewPassword()));
     }
+    @GetMapping("/current-user")
+    public ResponseEntity<LoginResponse> currentUser(Authentication authentication) throws Exception {
+
+        String email = authentication.getName();
+        return ResponseEntity.ok(authService.currentUser(email));
+    }
 }
