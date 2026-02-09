@@ -2,15 +2,14 @@ package com.netflix.clone.controller;
 
 import com.netflix.clone.dto.request.UserRequest;
 import com.netflix.clone.dto.response.MessageResponse;
+import com.netflix.clone.dto.response.PageResponse;
+import com.netflix.clone.dto.response.UserResponse;
 import com.netflix.clone.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -23,5 +22,18 @@ public class UserController {
     @PostMapping("/create")
     public ResponseEntity<MessageResponse> createUser(@RequestBody UserRequest userRequest){
         return ResponseEntity.ok(userService.createUser(userRequest));
+    }
+    @PutMapping("/update/{id}")
+    public ResponseEntity<MessageResponse> updateUser(@PathVariable Long id, @RequestBody UserRequest userRequest) throws Exception {
+        return ResponseEntity.ok(userService.updateUser(id, userRequest));
+    }
+    @GetMapping()
+    public ResponseEntity<PageResponse<UserResponse>> getAllUser(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search){
+
+        return ResponseEntity.ok(userService.getUser(page, size, search));
+
     }
 }
