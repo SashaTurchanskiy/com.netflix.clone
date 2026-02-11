@@ -12,4 +12,10 @@ public interface UserService {
     MessageResponse updateUser(Long id, UserRequest userRequest) throws Exception;
 
     PageResponse<UserResponse> getUser(int page, int size, String search);
+
+    MessageResponse deleteUser(Long id, String currentUserEmail) throws Exception;
+
+    MessageResponse toggleUserStatus(Long id, String currentUserEmail) throws Exception;
+
+    MessageResponse changeUserRole(Long id, UserRequest request) throws Exception;
 }

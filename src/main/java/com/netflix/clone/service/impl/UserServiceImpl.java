@@ -93,4 +93,58 @@ public class UserServiceImpl implements UserService {
         }
         return PaginationUtils.toPageResponse(userPage, UserResponse::fromEntity);
     }
+
+    @Override
+    public MessageResponse deleteUser(Long id, String currentUserEmail) throws Exception {
+        User user = serviceUtils.getUserByIdOrThrow(id);
+
+        if (user.getEmail().equals(currentUserEmail)){
+            throw new RuntimeException("You cannot delete your own email");
+        }
+
+        ensureNotLastAdmin(user, "delete");
+
+        userRepository.deleteById(id);
+
+        return new MessageResponse("User deleted successfully");
+    }
+
+    @Override
+    public MessageResponse toggleUserStatus(Long id, String currentUserEmail) throws Exception {
+        User user = serviceUtils.getUserByIdOrThrow(id);
+
+        if (user.getEmail().equals(currentUserEmail)){
+            throw new RuntimeException("You cannot deactivate your own account");
+        }
+
+        ensureNotLastActiveAdmin(user);
+
+        user.setActive(!user.isActive());
+        userRepository.save(user);
+        return new MessageResponse("User status updated successfully");
+    }
+
+    @Override
+    public MessageResponse changeUserRole(Long id, UserRequest request) throws Exception {
+        User user = serviceUtils.getUserByIdOrThrow(id);
+        validateRole(request.getRole());
+
+        Role newRole = Role.valueOf(request.getRole().toUpperCase());
+        if (user.getRole() == Role.ADMIN && newRole == Role.USER){
+            ensureNotLastAdmin(user, "change the role of");
+        }
+
+        user.setRole(newRole);
+        userRepository.save(user);
+        return new MessageResponse("User role updated successfully");
+    }
+
+    private void ensureNotLastAdmin(User user, String operation) {
+        if (user.getRole() == Role.ADMIN){
+            long adminCount = userRepository.countByRole(Role.ADMIN);
+            if (adminCount <= 1){
+                throw new RuntimeException("Cannot" + operation + "the last admin user");
+            }
+        }
+    }
 }

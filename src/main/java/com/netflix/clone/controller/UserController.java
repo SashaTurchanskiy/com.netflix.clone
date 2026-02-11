@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,6 +35,22 @@ public class UserController {
             @RequestParam(required = false) String search){
 
         return ResponseEntity.ok(userService.getUser(page, size, search));
-
     }
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<MessageResponse> deleteUser(@PathVariable Long id, Authentication authentication) throws Exception {
+        String currentUserEmail = authentication.getName();
+        return ResponseEntity.ok(userService.deleteUser(id, currentUserEmail));
+    }
+    @PutMapping("/{id}/toggle-status")
+    public ResponseEntity<MessageResponse> toggleUserStatus(
+            @PathVariable Long id, Authentication authentication) throws Exception {
+        String currentUserEmail = authentication.getName();
+        return ResponseEntity.ok(userService.toggleUserStatus(id, currentUserEmail));
+    }
+    @PutMapping("/{id}/change-role")
+    public ResponseEntity<MessageResponse> changeUserRole(
+            @PathVariable Long id, @RequestBody UserRequest request) throws Exception {
+     return ResponseEntity.ok(userService.changeUserRole(id, request));
+    }
+
 }
