@@ -40,7 +40,7 @@ public class FileHandlerUtil {
         if (filename.endsWith(".flv")) return "video/x-flv";
         if (filename.endsWith(".wmv")) return "video/x-ms-wmv";
         if (filename.endsWith(".m4v")) return "video/x-m4v";
-        if (filename.endsWith(",3gp")) return "video/3gpp";
+        if (filename.endsWith(".3gp")) return "video/3gpp";
         if (filename.endsWith(".mpg") || filename.endsWith(".mpeg")) return "video/mpeg";
 
         return "video.mp4";
