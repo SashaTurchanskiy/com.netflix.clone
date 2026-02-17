@@ -50,8 +50,8 @@ public class VideoResponse {
                 video.getYear(),
                 video.getRating(),
                 video.getDuration(),
-                video.getPoster(),
                 video.getSrc(),
+                video.getPoster(),
                 video.isPublished(),
                 video.getCategories(),
                 video.getCreatedAt(),
@@ -60,7 +60,7 @@ public class VideoResponse {
         if (video.getIsInWatchlist() != null){
             response.setInInWatchlist(video.getIsInWatchlist());
         }
-        return null;
+        return response;
     }
 
 
