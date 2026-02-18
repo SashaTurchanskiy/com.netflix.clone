@@ -11,4 +11,8 @@ public interface VideoService {
      MessageResponse createVideoByAdmin(VideoRequest request);
 
      PageResponse<VideoResponse> getAllAdminVideo(int page, int size, String search);
+
+     MessageResponse updateVideoByAdmin(Long id, VideoRequest request);
+
+     MessageResponse deleteVideoByAdmin(Long id);
 }

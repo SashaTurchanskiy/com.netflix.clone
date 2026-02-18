@@ -32,4 +32,17 @@ public class VideoController {
             @RequestParam(required = false) String search){
         return ResponseEntity.ok(videoService.getAllAdminVideo(page, size, search));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/admin/{id}")
+    public ResponseEntity<MessageResponse> updateVideoByAdmin(@PathVariable Long id, @Valid @RequestBody VideoRequest request) {
+        // Implement the update logic in the service layer
+        return ResponseEntity.ok(videoService.updateVideoByAdmin(id, request));
+    }
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<MessageResponse> deleteVideoByAdmin(@PathVariable Long id) {
+        // Implement the delete logic in the service layer
+        return ResponseEntity.ok(videoService.deleteVideoByAdmin(id));
+    }
 }
