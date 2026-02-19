@@ -6,16 +6,19 @@ import com.netflix.clone.dto.request.VideoRequest;
 import com.netflix.clone.dto.response.MessageResponse;
 import com.netflix.clone.dto.response.PageResponse;
 import com.netflix.clone.dto.response.VideoResponse;
+import com.netflix.clone.dto.response.VideoStatsResponse;
 import com.netflix.clone.entity.Video;
 import com.netflix.clone.service.VideoService;
 import com.netflix.clone.util.PaginationUtils;
 import com.netflix.clone.util.ServiceUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -80,6 +83,60 @@ public class VideoServiceImpl implements VideoService {
         }
         videoRepository.deleteById(id);
         return new MessageResponse("Video deleted successfully");
+    }
+
+    @Override
+    public MessageResponse toggleVideoPublishStatusByAdmin(Long id, boolean status) throws Exception {
+        Video video = serviceUtils.getVideoByIdOrThrow(id);
+        video.setPublished(status);
+        videoRepository.save(video);
+        return new MessageResponse("Video publish status updated successfully");
+    }
+
+    @Override
+    public VideoStatsResponse getAdminStats() {
+        long totalVideos = videoRepository.count();
+        long publishedVideos = videoRepository.countPublishedVideos();
+        long totalDuration  = videoRepository.getTotalDuration();
+        return new VideoStatsResponse(totalVideos, publishedVideos, totalDuration);
+    }
+
+    @Override
+    public PageResponse<VideoResponse> getPublishedVideo(int page, int size, String search, String email) {
+        Pageable pageable = PaginationUtils.createPageRequest(page, size, "id");
+        Page<Video> videoPage;
+
+        if (search != null && !search.trim().isEmpty()){
+            videoPage = videoRepository.searchPublishedVideo(search.trim(), pageable);
+        }else {
+            videoPage = videoRepository.findPublishedVideo(pageable);
+        }
+
+        List<Video> videos = videoPage.getContent();
+
+        Set<Long> watchlistIds = Set.of();
+        if (!videos.isEmpty()){
+            try {
+                List<Long> videoIds = videos.stream().map(Video::getId).toList();
+                watchlistIds = userRepository.findWatchlistVideoIds(email, videoIds);
+            }catch (Exception e){
+                watchlistIds = Set.of();
+            }
+        }
+
+        Set<Long> finalWatchlistIds = watchlistIds;
+        videos.forEach(video -> video.setIsInWatchlist(finalWatchlistIds.contains(video.getId())));
+
+        List<VideoResponse> videoResponses = videos.stream().map(VideoResponse::fromEntity).toList();
+        return PaginationUtils.totalPageResponse(videoPage, videoResponses);
+    }
+
+    @Override
+    public List<VideoResponse> getFeaturedVideos() {
+        Pageable pageable = PageRequest.of(0, 5);
+        List<Video> videos = videoRepository.findRandomPublishedVideos(pageable);
+
+        return videos.stream().map(VideoResponse::fromEntity).toList();
     }
 
 
